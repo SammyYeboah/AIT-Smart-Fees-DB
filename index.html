@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1d3fa8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="AIT Fees">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>AIT SMART FEE KEEPER</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=DM+Sans:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- Shown until config.js is filled in -->
+<div class="screen" id="screenSetup" hidden>
+  <div class="hero"><img src="icons/logo-login.png" alt="AIT Smart School Academy logo"><h1>AIT SMART FEE KEEPER</h1><p>One more step to finish setup</p></div>
+  <div class="panel">
+    <h2>Connect the database</h2>
+    <p class="lead">This app needs its database address. Open <code>config.js</code> in the repository and fill in two values from Supabase.</p>
+    <ol>
+      <li>Supabase: Project Settings, then API.</li>
+      <li>Copy the <b>Project URL</b> and the <b>anon public</b> key into <code>config.js</code>.</li>
+      <li>Commit the change. This page updates in about a minute.</li>
+    </ol>
+    <p class="hint">The full steps are in README.md.</p>
+  </div>
+</div>
+
+<!-- Sign in / request access -->
+<div class="screen" id="screenAuth" hidden>
+  <div class="hero"><img src="icons/logo-login.png" alt="AIT Smart School Academy logo"><h1>AIT SMART FEE KEEPER</h1><p>AIT SMART SCHOOL ACADEMY<br>Making a difference</p></div>
+  <div class="panel">
+    <div class="authseg" id="authSeg">
+      <button type="button" data-v="in" aria-pressed="true">Sign in</button>
+      <button type="button" data-v="up" aria-pressed="false">Request access</button>
+    </div>
+    <form id="loginForm" autocomplete="on">
+      <label for="liEmail">Email</label>
+      <input id="liEmail" type="email" autocomplete="username" inputmode="email" required>
+      <label for="liPass">Password</label>
+      <input id="liPass" type="password" autocomplete="current-password" required>
+      <button class="btn" type="submit" id="liBtn">Sign in</button>
+      <button class="linkbtn" type="button" id="forgotBtn">Forgot password?</button>
+    </form>
+    <form id="signupForm" autocomplete="on" hidden>
+      <p class="lead">Staff only. An admin has to approve your request before you can see anything.</p>
+      <label for="suName">Your full name</label>
+      <input id="suName" autocomplete="name" required>
+      <label for="suEmail">Email</label>
+      <input id="suEmail" type="email" autocomplete="username" inputmode="email" required>
+      <label for="suPass">Password (at least 8 characters)</label>
+      <input id="suPass" type="password" autocomplete="new-password" minlength="8" required>
+      <button class="btn" type="submit" id="suBtn">Request access</button>
+    </form>
+    <div class="msg" id="authMsg" hidden></div>
+  </div>
+</div>
+
+<!-- Signed in but not approved yet -->
+<div class="screen" id="screenWait" hidden>
+  <div class="hero"><img src="icons/logo-login.png" alt="AIT Smart School Academy logo"><h1>AIT SMART FEE KEEPER</h1></div>
+  <div class="panel">
+    <h2>Waiting for approval</h2>
+    <p class="lead" id="waitText">Your request has been received. An admin needs to approve it before you can open the records.</p>
+    <button class="btn" id="waitCheck">Check again</button>
+    <button class="btn alt" id="waitOut">Sign out</button>
+  </div>
+</div>
+
+<!-- The app -->
+<div id="screenApp" hidden>
+  <header class="top">
+    <div class="wrap">
+      <div class="brand">
+        <img class="badge" src="icons/logo-badge.png" width="54" height="54" alt="AIT Smart School Academy logo">
+        <div class="brandtxt">
+          <h1>AIT SMART FEE KEEPER</h1>
+          <div class="line"><span id="who">AIT Smart School Academy</span><b class="role" id="rolePill"></b></div>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat"><b class="num" id="sCol">GH₵0</b><span>Collected</span></div>
+        <div class="stat owe"><b class="num" id="sOwe">GH₵0</b><span>Still owing</span></div>
+        <div class="stat"><b class="num" id="sStu">0</b><span>Pupils</span></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- RECORD -->
+    <section class="tab" id="tab-add">
+      <div class="card">
+        <h2>Record a payment</h2>
+        <p class="lead">A name that already exists is never duplicated. The payment is added to that pupil.</p>
+        <label for="fName">Pupil's full name</label>
+        <input id="fName" list="nameList" placeholder="e.g. Kwame Mensah" autocomplete="off">
+        <datalist id="nameList"></datalist>
+        <div class="note" id="dupNote"></div>
+
+        <label for="fClass">Class</label>
+        <select id="fClass"></select>
+
+        <div class="row">
+          <div><label for="fAmt">Amount paid (GH₵)</label><input id="fAmt" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+          <div><label for="fDate">Date paid</label><input id="fDate" type="date"></div>
+        </div>
+
+        <label for="fNote">Note (optional)</label>
+        <input id="fNote" maxlength="300" placeholder="e.g. 1st term fees, receipt no.">
+
+        <button class="btn" id="saveBtn">Save payment</button>
+        <button class="btn alt" id="addOnlyBtn">Add pupil without a payment</button>
+        <p class="hint">Adding a pupil with no payment shows their full class fee as owing.</p>
+      </div>
+    </section>
+
+    <!-- PUPILS -->
+    <section class="tab" id="tab-list">
+      <div class="card" style="padding:12px">
+        <input id="qSearch" placeholder="Search pupil name" aria-label="Search pupil name">
+        <select id="qClass" style="margin-top:8px" aria-label="Filter by class"></select>
+        <div class="chips" id="qStatus">
+          <button class="chip" data-v="" aria-pressed="true">All</button>
+          <button class="chip" data-v="owing" aria-pressed="false">Owing</button>
+          <button class="chip" data-v="cleared" aria-pressed="false">Cleared</button>
+        </div>
+      </div>
+      <div id="listWrap"><div class="empty">Loading records…</div></div>
+    </section>
+
+    <!-- REPORT -->
+    <section class="tab" id="tab-report">
+      <div class="card noprint">
+        <h2>Report</h2>
+        <div class="seg" id="rMode" style="margin-top:10px">
+          <button data-v="sum" aria-pressed="true">Fees summary</button>
+          <button data-v="log" aria-pressed="false">Payment log</button>
+        </div>
+        <label for="rClass">Class</label>
+        <select id="rClass"></select>
+        <div id="rSumFilter">
+          <label for="rStatus">Show</label>
+          <select id="rStatus"><option value="">Everyone</option><option value="owing">Only pupils owing</option><option value="cleared">Only cleared pupils</option></select>
+        </div>
+        <div class="row" id="rDates" hidden>
+          <div><label for="rFrom">From</label><input id="rFrom" type="date"></div>
+          <div><label for="rTo">To</label><input id="rTo" type="date"></div>
+        </div>
+        <div class="row">
+          <button class="btn" id="csvBtn">Download CSV</button>
+          <button class="btn alt" id="printBtn">Print or save PDF</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="printonly" id="printHead">
+          <img src="icons/logo-badge.png" alt="">
+          <div><h2>AIT Smart School Academy</h2><p id="printMeta"></p></div>
+        </div>
+        <h2 class="noprint">AIT Smart School Academy</h2>
+        <div class="sub" id="rSub" style="margin-bottom:10px"></div>
+        <div class="scroll" id="rBody"></div>
+      </div>
+    </section>
+
+    <!-- FEES -->
+    <section class="tab" id="tab-fees">
+      <div class="card">
+        <h2>Class fees</h2>
+        <p class="lead" id="feeLead"></p>
+        <div id="feeList"></div>
+        <button class="btn" id="feeSave">Save fees</button>
+      </div>
+    </section>
+
+    <!-- MORE -->
+    <section class="tab" id="tab-more">
+      <div class="card">
+        <h2>Your account</h2>
+        <div class="me"><b id="meName"></b><span class="sub" id="meMail"></span></div>
+        <label for="newPass">Change password</label>
+        <input id="newPass" type="password" autocomplete="new-password" minlength="8" placeholder="New password (at least 8 characters)">
+        <button class="btn alt" id="passBtn">Update password</button>
+        <button class="btn" id="outBtn">Sign out</button>
+        <p class="hint">You are signed out automatically after 30 minutes without use.</p>
+      </div>
+
+      <div class="card" id="usersCard" hidden>
+        <h2>People</h2>
+        <p class="lead">Approve new staff and choose what each person can do.</p>
+        <div id="usersList"></div>
+      </div>
+
+      <div class="card">
+        <h2>Who can do what</h2>
+        <ul class="rolelist">
+          <li><b>Admin</b>Sets class and custom fees, voids payments, archives pupils, approves people, reads the activity log.</li>
+          <li><b>Bursar</b>Records payments, adds pupils, fixes names and classes, views every report.</li>
+          <li><b>View only</b>Sees pupils, balances and reports. Cannot change anything.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>Regular exports</h2>
+        <p class="lead">Download a copy at the end of each week or term and keep it somewhere safe.</p>
+        <button class="btn" id="expPay">Download all payments (CSV)</button>
+        <button class="btn alt" id="expAll">Download full backup (JSON)</button>
+        <p class="hint" id="lastExport"></p>
+      </div>
+
+      <div class="card" id="actCard" hidden>
+        <h2>Activity log</h2>
+        <p class="lead">Every payment, correction, fee change and approval, with who did it. The database writes it, and nobody can edit or delete an entry.</p>
+        <div class="log" id="actList"></div>
+        <button class="btn alt" id="logCsv">Download full activity log (CSV)</button>
+      </div>
+
+      <div class="card" id="archCard" hidden>
+        <h2>Archived pupils</h2>
+        <div id="archList"></div>
+      </div>
+
+      <div class="card" id="installCard">
+        <h2>Use it like an app</h2>
+        <button class="btn" id="installBtn" hidden>Install on this phone</button>
+        <p class="lead" style="margin:8px 0 0"><b>Android (Chrome):</b> tap the three dots, then Add to Home screen.<br><b>iPhone (Safari):</b> tap Share, then Add to Home Screen.</p>
+      </div>
+    </section>
+  </main>
+
+  <nav aria-label="Sections">
+    <button data-tab="add" id="navAdd"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>Record</button>
+    <button data-tab="list"><span class="ic"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.9M16 3.1a4 4 0 010 7.8"/></svg></span>Pupils</button>
+    <button data-tab="report"><span class="ic"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M8 13h8M8 17h8"/></svg></span>Report</button>
+    <button data-tab="fees"><span class="ic"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="13" rx="2"/><circle cx="12" cy="12.5" r="3"/><path d="M6 9.5h.01M18 15.5h.01"/></svg></span>Fees</button>
+    <button data-tab="more"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></span>More</button>
+  </nav>
+</div>
+
+<div id="toast" role="status"></div>
+
+<div class="modal" id="editModal" hidden><div class="sheet">
+  <h2>Edit pupil</h2>
+  <label for="eName">Name</label><input id="eName">
+  <label for="eClass">Class</label><select id="eClass"></select>
+  <div id="eFeeWrap" hidden><label for="eFee">Custom fee (GH₵, optional)</label><input id="eFee" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Leave blank to use the class fee"></div>
+  <div class="row"><button class="btn alt" id="eCancel">Cancel</button><button class="btn" id="eSave">Save</button></div>
+</div></div>
+
+<div class="modal" id="confirmModal" hidden><div class="sheet">
+  <h2 id="cTitle"></h2>
+  <p id="cBody"></p>
+  <div id="cReasonWrap" hidden><label for="cReason">Reason (kept in the activity log)</label><input id="cReason" maxlength="200" placeholder="e.g. Entered twice by mistake"></div>
+  <div class="row"><button class="btn alt" id="cNo">Cancel</button><button class="btn" id="cOk">Confirm</button></div>
+</div></div>
+
+<div class="modal" id="recoverModal" hidden><div class="sheet">
+  <h2>Set a new password</h2>
+  <label for="rcPass">New password (at least 8 characters)</label>
+  <input id="rcPass" type="password" autocomplete="new-password" minlength="8">
+  <button class="btn" id="rcSave">Save password</button>
+</div></div>
+
+<script src="config.js"></script>
+<script src="vendor/supabase.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
