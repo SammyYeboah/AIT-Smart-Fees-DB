@@ -3,6 +3,6 @@
 // every request is checked against the sign-in and the rules in supabase/schema.sql.
 // Never put the "service_role" key here.
 window.AIT_CONFIG = {
-  SUPABASE_URL: "1https://vrqoqcaweqqtcgfgixbv.supabase.co",
+  SUPABASE_URL: "https://vrqoqcaweqqtcgfgixbv.supabase.co",
   SUPABASE_ANON_KEY: "sb_publishable_xYxlUWaX_YXkwniinqiFvA_FpGLbACe"
 };
