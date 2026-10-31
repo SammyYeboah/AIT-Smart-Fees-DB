@@ -1,112 +1,352 @@
-# AIT SMART FEE KEEPER
+AIT SMART FEE KEEPER
 
-School fee records for AIT Smart School Academy. Staff sign in, record payments, and see who has paid, when, how much, and what is still owing. Everyone sees the same live records.
+A Centralised School Fee Management System for AIT Smart School Academy
 
-- **Website (this repository, GitHub Pages):** the screens. It holds no records.
-- **Database and logins (Supabase):** the records, the accounts, and the rules about who can do what.
+""Live Website" (https://img.shields.io/badge/Live-Website-blue?style=for-the-badge)" (https://aitsmartfees.netlify.app)
 
-The setup takes about 20 minutes and costs nothing. Do the steps in order.
+AIT Smart Fee Keeper is a web-based school fee management system designed to help AIT Smart School Academy manage student fee records, track payments, monitor outstanding balances, and improve financial record-keeping.
 
----
+The system provides authorised staff with a shared platform where student and payment information can be accessed and managed according to their assigned permissions.
 
-## 1. Create the database (Supabase)
+Live Application: https://aitsmartfees.netlify.app
 
-1. Go to <https://supabase.com>, sign up, and click **New project**.
-2. Name it `AIT Fees`. Choose a strong database password and save it somewhere safe. Pick the region closest to Ghana that is offered.
-3. When the project is ready, open **SQL Editor**, click **New query**, paste the whole of `supabase/schema.sql`, and click **Run**. You should see "Success". It is safe to run again later.
-
-## 2. Sign-in settings (Supabase)
-
-1. **Authentication > Sign In / Providers** (called just **Providers** in some versions) **> Email**: keep Email enabled. Turn **Confirm email** off if you do not want to set up an email service (new accounts still need an admin's approval, so this is safe). Set the minimum password length to 8 or more.
-2. **Authentication > URL Configuration**:
-   - **Site URL**: `https://sammyyeboah.github.io/AIT-Smart-Fees-DB/`
-   - Add the same address under **Redirect URLs**. This makes the "Forgot password" link work.
-
-## 3. Connect the website to the database
-
-1. In Supabase open **Project Settings > API**.
-2. Copy the **Project URL** and the **anon public** key.
-3. Open `config.js` in this repository and paste them between the quotes. Save and commit.
-
-The anon key is meant to be public. On its own it cannot read or change anything. Never paste the **service_role** key anywhere.
-
-## 4. Publish the website (GitHub Pages)
-
-1. Upload every file and folder from this project to the repository (**Add file > Upload files**, drag everything in, then **Commit changes**).
-2. Open **Settings > Pages**. Under **Build and deployment**, set **Source** to **Deploy from a branch**, choose **main** and **/ (root)**, then **Save**.
-3. After about a minute the app is live at `https://sammyyeboah.github.io/AIT-Smart-Fees-DB/`.
-
-## 5. Create the first admin (do this before sharing the link)
-
-1. Open the website, tap **Request access**, and sign up with your own name and email.
-2. **The very first account becomes the admin automatically.** Everyone after you waits for approval.
-3. Go to **Fees** and set the fee for each class.
-4. Tell your colleagues to open the link and tap **Request access**. Approve them in **More > People** and choose their role.
-
-If you would rather nobody can request access themselves, switch off **Allow new users to sign up** in the same Supabase Authentication settings and add each person under **Authentication > Users > Add user**. They then appear in the app, waiting for your approval.
+GitHub Repository: https://github.com/SammyYeboah/AIT-Smart-Fees-DB
 
 ---
 
-## Roles
+📌 Table of Contents
 
-| Role | Can do |
-|---|---|
-| **Admin** | Everything: class fees, custom fees, void payments, archive pupils, approve people, read the activity log |
-| **Bursar** | Record payments, add pupils, fix names and classes, view all reports |
-| **View only** | See pupils, balances and reports. Cannot change anything |
+- "Overview" (#-overview)
+- "Key Features" (#-key-features)
+- "Technology Stack" (#-technology-stack)
+- "How the System Works" (#-how-the-system-works)
+- "User Roles" (#-user-roles)
+- "Database Setup" (#-database-setup)
+- "Application Configuration" (#-application-configuration)
+- "Deployment" (#-deployment)
+- "Project Structure" (#-project-structure)
+- "Security" (#-security)
+- "Backup and Maintenance" (#-backup-and-maintenance)
+- "Accessing the Application" (#-accessing-the-application)
 
-New sign-ups start with no access until an admin approves them. An admin can disable a person at any time, and that person is locked out immediately. The system always keeps at least one active admin.
+---
 
-## What protects the records
+📖 Overview
 
-These rules are enforced by the database itself, not just by the buttons in the app:
+AIT Smart Fee Keeper replaces fragmented manual fee-recording processes with a centralised digital system.
 
-- Nobody can see or change anything without signing in and being approved.
-- A pupil's name can exist only once, whatever the capitalisation or word order ("Mensah Kwame" is "Kwame Mensah").
-- Payments are never edited or deleted. An admin can void a payment, with a reason, and it stays visible and struck through.
-- Pupils are archived with a reason, never deleted.
-- Every payment, correction, fee change, approval and archive is written to the activity log with who did it and when. Nobody, including admins, can edit or delete a log entry through the app.
-- People are signed out after 30 minutes without use (change `IDLE_MIN` in `app.js`).
+The application enables authorised school staff to:
 
-## Keeping it reliable
+- Register and manage student information.
+- Record student fee payments.
+- Track payment history.
+- Monitor outstanding fee balances.
+- Configure fees for different classes.
+- Generate and export payment reports.
+- Manage staff accounts and permissions.
+- Review important system activities.
 
-- **Download a copy regularly.** In **More > Regular exports**, download the payments CSV at the end of each week or term and keep it somewhere safe.
-- **Free Supabase projects pause after about a week with no activity.** During term time the app keeps it awake. After a long holiday, open your Supabase dashboard and click **Restore** if it shows as paused. Check Supabase's current plan details, because these limits can change.
-- **Paid plans add automatic daily backups.** If the school treats this as its official fee record, consider upgrading and having a second person with access to the Supabase account.
-- This repository must be **public** for free GitHub Pages. It contains only the app's code, no records.
-- Pupil fee records are personal data. Only approve people who need them, and use **View only** wherever possible.
+All authorised users work with the same central database, ensuring that changes made by one user are reflected for other authorised users.
 
-## Changing things
+✨ Key Features
 
-- **Class names:** edit the `CLASSES` list at the top of `app.js`. The new names appear everywhere automatically.
-- **Currency symbol:** search `GH₵` in `app.js` and `supabase/schema.sql`.
-- **Logo and colours:** replace the files in `icons/`; colours are at the top of `styles.css`.
-- After you edit a file on GitHub, wait a minute and refresh. If an old version appears on a phone, close and reopen the app.
+👨‍🎓 Student Management
 
-## Install on a phone
+- Add and manage student records.
+- Maintain student names and class information.
+- View individual student payment status.
+- Track outstanding balances.
 
-- **Android (Chrome):** open the site, tap the three dots, then **Add to Home screen** (or **Install on this phone** in More).
-- **iPhone (Safari):** tap **Share**, then **Add to Home Screen**.
+💰 Payment Management
 
-The app needs an internet connection to record and read payments.
+- Record student fee payments.
+- View payment histories.
+- Monitor amounts paid and outstanding.
+- Maintain transaction records.
 
-## Files
+🏫 Class Fee Management
 
-| File | Purpose |
-|---|---|
-| `index.html`, `styles.css`, `app.js` | The app |
-| `config.js` | The two Supabase values you fill in |
-| `supabase/schema.sql` | Database tables, roles, rules and the activity log |
-| `vendor/supabase.js` | The Supabase browser library (MIT licence), included so the app does not depend on another website |
-| `sw.js`, `manifest.webmanifest`, `icons/` | Install-as-app support and the school logo |
+- Configure fees for different classes.
+- Track payments against applicable class fees.
+- Monitor outstanding balances.
 
-## First-run checklist
+📊 Reports and Analytics
 
-Do this once after setup, with two phones or two browsers:
+- View payment summaries.
+- Monitor outstanding fees.
+- Generate financial reports.
+- Export records in CSV format.
 
-1. Sign up as the admin. Set one class fee.
-2. Request access from a second account and approve it as **Bursar** in More > People.
-3. On the bursar's phone, record a payment for a new pupil.
-4. On the admin's phone, confirm the pupil, the payment and the owing balance appear without any special steps.
-5. Check the activity log (More) shows both people's actions.
-6. Sign in as a **View only** person and confirm there is no Record tab.
+👥 Staff Management
+
+- Register staff accounts.
+- Approve or disable user accounts.
+- Assign access roles.
+- Control access to system functions.
+
+📝 Activity Logs
+
+- Record important system activities.
+- Track actions performed by authorised users.
+- Support accountability and record monitoring.
+
+---
+
+🛠 Technology Stack
+
+Technology| Purpose
+HTML5| Application structure
+CSS3| User interface and styling
+JavaScript| Application functionality
+Supabase| Database and authentication
+Netlify| Website hosting
+GitHub| Source code management
+
+⚙️ How the System Works
+
+The application consists of two major components:
+
+1. Frontend
+
+The frontend is the website users interact with through their browsers. It provides the login page, dashboard, student management, payment recording and reporting interfaces.
+
+2. Backend
+
+Supabase provides the backend infrastructure, including:
+
+- User authentication.
+- PostgreSQL database.
+- Data storage.
+- Database access policies.
+- User-related information.
+
+System Workflow
+
+1. A staff member opens the application.
+2. The staff member signs in using their registered credentials.
+3. Supabase authenticates the account.
+4. The application checks the user's access permissions.
+5. The authorised user accesses the available dashboard features.
+6. Student and payment information is retrieved from or saved to the shared database.
+7. Updated information becomes available to other authorised users.
+
+---
+
+👤 User Roles
+
+The application supports different levels of access.
+
+Role| Description
+Admin| Manages users, student records, class fees, payments and reports.
+Bursar| Handles student payments, student information and financial records.
+View Only| Views student records, payment information and reports without making changes.
+
+Account Registration and Approval
+
+The initial administrator account is intended to be established through the first-user registration process configured in the database.
+
+Subsequent accounts are subject to administrator approval.
+
+Administrators can assign appropriate roles and manage access to the application.
+
+---
+
+🗄 Database Setup
+
+The application uses Supabase PostgreSQL as its central database.
+
+Database Tables
+
+The database includes the following main tables:
+
+Table| Purpose
+"students"| Stores student information.
+"payments"| Stores student payment transactions.
+"class_fees"| Stores fee configurations for classes.
+"profiles"| Stores user profile and role information.
+"audit_log"| Stores records of important system activities.
+
+Creating the Database
+
+1. Create an account at "Supabase" (https://supabase.com).
+2. Create a new project.
+3. Open the project's SQL Editor.
+4. Open "supabase/schema.sql" from this repository.
+5. Copy the complete SQL script.
+6. Paste it into the Supabase SQL Editor.
+7. Execute the script.
+8. Confirm that the database tables have been created successfully.
+
+---
+
+🔑 Application Configuration
+
+The application connects to Supabase through "config.js".
+
+To configure the connection:
+
+1. Open your Supabase project.
+2. Navigate to Project Settings → API.
+3. Copy your Project URL.
+4. Copy your publishable key or legacy anon public key.
+5. Open "config.js" in the project.
+6. Enter the appropriate values.
+
+Example:
+
+window.AIT_CONFIG = {
+  SUPABASE_URL: "YOUR_SUPABASE_PROJECT_URL",
+  SUPABASE_ANON_KEY: "YOUR_SUPABASE_PUBLIC_KEY"
+};
+
+Important: Never expose your Supabase "service_role" key or secret key in frontend code.
+
+Database access must be protected through properly configured Row Level Security (RLS) policies.
+
+Authentication Configuration
+
+In the Supabase dashboard:
+
+1. Open Authentication.
+2. Enable Email authentication.
+3. Configure email confirmation according to your requirements.
+4. Set the minimum password length to at least eight characters.
+5. Open URL Configuration.
+
+Set the Site URL to:
+
+"https://aitsmartfees.netlify.app"
+
+Add the application URL to the permitted Redirect URLs.
+
+---
+
+🚀 Deployment
+
+AIT Smart Fee Keeper is hosted on Netlify.
+
+Live Website: https://aitsmartfees.netlify.app
+
+The source code is maintained in the GitHub repository.
+
+Deployment Workflow
+
+1. Make the required changes to the source code.
+2. Commit and push the changes to GitHub.
+3. Netlify detects changes in the connected repository.
+4. Netlify deploys the updated application.
+5. The updated version becomes available through the live website.
+
+---
+
+📁 Project Structure
+
+AIT-Smart-Fees-DB/
+│
+├── index.html
+├── styles.css
+├── app.js
+├── config.js
+├── manifest.webmanifest
+├── sw.js
+│
+├── vendor/
+│   └── supabase.js
+│
+├── supabase/
+│   └── schema.sql
+│
+├── icons/
+│
+└── README.md
+
+File/Folder| Description
+"index.html"| Main application page.
+"styles.css"| Application styling.
+"app.js"| Main JavaScript functionality.
+"config.js"| Supabase connection configuration.
+"manifest.webmanifest"| Progressive Web App configuration.
+"sw.js"| Service worker.
+"vendor/"| Supabase browser library.
+"supabase/"| Database schema and SQL scripts.
+"icons/"| Application icons.
+"README.md"| Project documentation.
+
+---
+
+🔐 Security
+
+The system handles student information and financial records, so security is important.
+
+Recommended security practices include:
+
+- Use individual staff accounts.
+- Assign permissions according to job responsibilities.
+- Protect user passwords.
+- Enable and verify Row Level Security policies.
+- Never expose secret backend credentials.
+- Disable accounts when access is no longer required.
+- Regularly review user permissions and activity logs.
+- Avoid sharing student financial records with unauthorised persons.
+
+Note: The security of the application depends on the actual database policies and access controls configured in Supabase. These should be tested before official deployment.
+
+---
+
+💾 Backup and Maintenance
+
+To protect important school records:
+
+- Export payment records regularly.
+- Store exported reports in a secure location.
+- Review Supabase database backup options.
+- Keep administrative credentials secure.
+- Test changes before deploying them to the live application.
+- Review database changes before executing SQL scripts.
+
+CSV exports are useful for record-keeping but do not replace complete database backups.
+
+---
+
+📱 Accessing the Application
+
+The application can be accessed through modern desktop and mobile browsers.
+
+Android
+
+1. Open the website in Google Chrome.
+2. Tap the three-dot menu.
+3. Select Add to Home screen or Install app, if available.
+
+iPhone
+
+1. Open the website in Safari.
+2. Tap the Share icon.
+3. Select Add to Home Screen.
+
+The application can then be launched from the device's home screen.
+
+---
+
+📌 Project Information
+
+Item| Details
+Project Name| AIT Smart Fee Keeper
+Organisation| AIT Smart School Academy
+Project Type| Web-Based School Fee Management System
+Currency| Ghana Cedi (GH₵)
+Frontend| HTML, CSS and JavaScript
+Backend| Supabase
+Hosting| Netlify
+Repository| SammyYeboah/AIT-Smart-Fees-DB
+Status| Deployed
+
+---
+
+Developed to support efficient, organised and accountable school fee management at AIT Smart School Academy.
+
+CREDITS:
+Claude AI by Anthropic
+OpenAI ChatGPT
+
+SITE: https://aitsmartfees.netlify.app
