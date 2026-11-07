@@ -221,7 +221,7 @@ https://aitsmartfees.netlify.app
 
 ---
 <p align="center">
-  --- ✨ <strong>LOSTA Inc</strong> ✨ ---
+  --- ✨ <strong>LOSTA Inc.</strong> ✨ ---
 </p>
 
 
