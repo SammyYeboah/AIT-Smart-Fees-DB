@@ -186,16 +186,12 @@ The database includes the following main tables:
 
 ---
 
-==========================================
-||                                      ||
-|| ### CREDITS:                         || 
-|| Claude AI by Anthropic.              ||
-|| OpenAI ChatGPT.                      ||
-||                                      ||
-|| ### SITE:                            ||
-|| https://aitsmartfees.netlify.app.    ||
-||                                      ||
-==========================================
+### CREDITS:
+* Claude AI by Anthropic.
+* OpenAI ChatGPT.
+
+### SITE:
+https://aitsmartfees.netlify.app.
 
 ---
 
@@ -206,7 +202,7 @@ The application connects to Supabase through `config.js`.
 ### Connecting to Supabase
 
 1. Open your Supabase project.
-2. Navigate to **Project Settings → API**.
+2. Navigate to **Project Settings the go to API**.
 3. Copy your Project URL.
 4. Copy your publishable key or legacy anon public key.
 5. Open `config.js` in the project.
@@ -224,4 +220,4 @@ window.AIT_CONFIG = {
 
 **Note:** This is documentation, not a verification of every feature. Compare the role permissions and registration workflow against the actual application.
 
-### --- **LOSTA Inc✨** ---
+     --- LOSTA Inc✨ ---
