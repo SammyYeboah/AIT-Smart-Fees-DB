@@ -192,3 +192,25 @@ nav button.on .ic{background:linear-gradient(135deg,var(--royal),var(--deep));co
   table{font-size:11px}
   th,tr.cls td,tr.tot td,tr.grand td{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
+
+/* ---- version 1.1 ---- */
+.stat.over b{color:#ffe08a}
+.stats.four{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.stats.four .stat{padding:8px}
+.stats.four .stat b{font-size:13.5px}
+.feenow{margin-top:8px;font-size:12px;opacity:.9}
+.feenow b{font-weight:700}
+.bal.over b{color:var(--warn)}
+.bar.over i{background:linear-gradient(90deg,#d9922b,#a15c07)}
+td.over{color:var(--warn);font-weight:700}
+.tag{display:inline-block;padding:1px 7px;margin-right:4px;border-radius:99px;font-size:11px;font-weight:700;background:var(--surface2);color:var(--link)}
+nav button.alert .ic{position:relative}
+nav button.alert .ic::after{content:"";position:absolute;top:1px;right:7px;width:10px;height:10px;border-radius:50%;background:var(--bad);border:2px solid var(--surface)}
+
+/* show / hide password */
+.pwbox{position:relative}
+.pwbox input{padding-right:48px}
+.pweye{position:absolute;top:0;right:0;bottom:0;width:46px;display:flex;align-items:center;justify-content:center;background:none;border:0;padding:0;color:var(--muted);cursor:pointer;border-radius:0 12px 12px 0}
+.pweye svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.pweye[aria-pressed="true"]{color:var(--link)}
+.pweye:focus-visible{outline:2px solid var(--royal);outline-offset:-3px}

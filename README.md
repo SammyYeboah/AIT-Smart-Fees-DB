@@ -58,6 +58,7 @@ All authorised users work with the same central database, ensuring that changes 
 - Maintain student names and class information.
 - View individual student payment status.
 - Track outstanding balances.
+- Archive a pupil (hidden, history kept) or delete a pupil permanently (admin only, with a reason; the activity log keeps a full copy of what was removed).
 
 ### 💰 Payment Management
 
@@ -65,6 +66,8 @@ All authorised users work with the same central database, ensuring that changes 
 - View payment histories.
 - Monitor amounts paid and outstanding.
 - Maintain transaction records.
+- Overpayments are tracked: a pupil who has paid more than their fee shows as **Overpaid**, with the amount the school holds for them (header tile, pupil list, reports and CSV).
+- **More than school fees (version 1.1):** choose what a payment is for (School fees, Sports fees, Books, Christmas party...). Only an admin adds these fees (Fees tab). Each one is either a *fixed amount per class* (the app shows who still owes or has overpaid) or *just collect* (totals only). The Report tab has a fee picker, including *All fees* for a collected-by-fee summary. Fees can be switched off without losing their payments.
 
 ### 🏫 Class Fee Management
 
@@ -82,9 +85,13 @@ All authorised users work with the same central database, ensuring that changes 
 ### 👥 Staff Management
 
 - Register staff accounts.
-- Approve or disable user accounts.
+- Approve **or decline** access requests. Declined (or disabled) people see "Access not granted" and can be approved later.
 - Assign access roles.
 - Control access to system functions.
+
+### 🔐 Sign-in
+
+- A show/hide eye on every password box.
 
 ### 📝 Activity Logs
 
@@ -173,6 +180,10 @@ The database includes the following main tables:
 | `profiles` | Stores user profile and role information. |
 | `audit_log` | Stores records of important system activities. |
 
+### Updating an existing database
+
+After a new version of `supabase/schema.sql` is released (for example 1.0 to 1.1), paste the whole file into the SQL Editor and run it again. It never deletes records, and the previous app version keeps working afterwards. **Run it before putting the new app files online.**
+
 ### Creating the Database
 
 1. Create an account at [Supabase](https://supabase.com).
@@ -193,7 +204,7 @@ The application connects to Supabase through `config.js`.
 ### Connecting to Supabase
 
 1. Open your Supabase project.
-2. Navigate to **Project Settings the go to API**.
+2. Navigate to **Project Settings → API**.
 3. Copy your Project URL.
 4. Copy your publishable key or legacy anon public key.
 5. Open `config.js` in the project.
@@ -203,25 +214,18 @@ Example:
 
 ```javascript
 window.AIT_CONFIG = {
-    SUPABASE_URL: "YOUR_SUPABASE_PROJECT_URL",
-    SUPABASE_ANON_KEY: "YOUR_SUPABASE_PUBLIC_KEY"
+  SUPABASE_URL: "YOUR_SUPABASE_PROJECT_URL",
+  SUPABASE_ANON_KEY: "YOUR_SUPABASE_PUBLIC_KEY"
 };
-```
-
-**Note:** This is documentation, not a verification of every feature. Compare the role permissions and registration workflow against the actual application.
-
----
-
-##### CREDITS:
-* Claude AI by Anthropic.
-* OpenAI ChatGPT.
-
-##### SITE:
-https://aitsmartfees.netlify.app
-
----
-<p align="center">
-  --- ✨ <strong>LOSTA Inc.</strong> ✨ ---
-</p>
 
 
+
+**Note:** This is documentation, not a verification of every feature. We should compare the role permissions and registration workflow against the actual application before presenting them as confirmed functionality.
+
+
+
+CREDITS:
+Claude AI by Anthropic
+OpenAI ChatGPT
+
+SITE: https://aitsmartfees.netlify.app

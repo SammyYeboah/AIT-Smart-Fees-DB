@@ -1,7 +1,9 @@
 -- =====================================================================
--- AIT SMART FEE KEEPER: database setup
+-- AIT SMART FEE KEEPER: database setup (version 1.1)
 -- Run this once in Supabase: SQL Editor > New query > paste > Run.
 -- It is safe to run again later; it will not delete any records.
+-- Upgrading from 1.0? Paste this whole file and run it. Run it BEFORE putting the 1.1 app files online.
+-- (The 1.0 app keeps working after it is run, so there is no rush between the two steps.)
 -- =====================================================================
 
 -- ---------- 1. People (one row per login) ----------
@@ -13,6 +15,8 @@ create table if not exists public.profiles (
   active      boolean not null default false,
   created_at  timestamptz not null default now()
 );
+-- An admin can decline a request (or switch someone off). Such people see an "access not granted" message.
+alter table public.profiles add column if not exists rejected boolean not null default false;
 
 -- The role of the signed-in person, or null if they are not active.
 create or replace function public.my_role() returns text
@@ -67,6 +71,41 @@ create table if not exists public.class_fees (
   updated_at  timestamptz not null default now(),
   updated_by  uuid default auth.uid()
 );
+
+-- ---------- 2b. Fee types: School fees, Sports fees, Books, Christmas party ... ----------
+-- Only an admin adds them. School fees always exists and cannot be renamed or switched off.
+-- Every payment belongs to one fee type.
+--   'fixed'   = the admin sets an amount per class, so the app can show who still owes (or has overpaid).
+--   'collect' = no amount; the app just records and totals what is paid.
+-- School fees keeps using the class_fees table above, exactly as in 1.0. Other fixed fees use fee_amounts.
+create table if not exists public.fee_types (
+  id          uuid primary key default gen_random_uuid(),
+  name        text not null check (length(btrim(name)) between 2 and 60),
+  kind        text not null default 'fixed' check (kind in ('fixed','collect')),
+  is_default  boolean not null default false,
+  active      boolean not null default true,
+  created_at  timestamptz not null default now(),
+  created_by  uuid default auth.uid()
+);
+create unique index if not exists fee_types_name_uq on public.fee_types (lower(btrim(name)));
+insert into public.fee_types(id, name, kind, is_default)
+  values ('00000000-0000-4000-8000-000000000001', 'School fees', 'fixed', true)
+  on conflict (id) do nothing;
+
+create table if not exists public.fee_amounts (
+  fee_type_id uuid not null references public.fee_types(id),
+  cls         text not null,
+  amount      numeric(12,2) not null check (amount >= 0),
+  updated_at  timestamptz not null default now(),
+  updated_by  uuid default auth.uid(),
+  primary key (fee_type_id, cls)
+);
+
+-- Payments: every existing payment becomes a School fees payment. A payment sent without a fee
+-- (for example by the 1.0 app) is also School fees.
+alter table public.payments add column if not exists fee_type_id uuid not null
+  default '00000000-0000-4000-8000-000000000001' references public.fee_types(id);
+create index if not exists payments_fee_type_idx on public.payments(fee_type_id);
 
 -- ---------- 3. Activity log (written only by the database itself) ----------
 create table if not exists public.audit_log (
@@ -139,6 +178,9 @@ begin
   if tg_op = 'INSERT' then
     new.created_by := coalesce(auth.uid(), new.created_by);
     new.voided := false; new.void_reason := null; new.voided_by := null; new.voided_at := null;
+    if not exists (select 1 from public.fee_types where id = new.fee_type_id and active) then
+      raise exception 'This fee is switched off. Ask an admin to switch it on first';
+    end if;
     if exists (select 1 from public.students where id = new.student_id and archived) then
       raise exception 'This pupil is archived. Ask an admin to restore them first';
     end if;
@@ -147,7 +189,7 @@ begin
   if auth.uid() is not null and coalesce(public.my_role(), '') <> 'admin' then
     raise exception 'Only an admin can void payments';
   end if;
-  if new.student_id <> old.student_id or new.amount <> old.amount or new.paid_on <> old.paid_on
+  if new.student_id <> old.student_id or new.fee_type_id <> old.fee_type_id or new.amount <> old.amount or new.paid_on <> old.paid_on
      or new.note is distinct from old.note or new.created_at <> old.created_at
      or new.created_by is distinct from old.created_by then
     raise exception 'Payments cannot be edited. Void the payment and record a new one';
@@ -171,6 +213,40 @@ end $$;
 drop trigger if exists class_fees_guard_trg on public.class_fees;
 create trigger class_fees_guard_trg before insert or update on public.class_fees
   for each row execute function public.class_fees_guard();
+
+-- Fee types: tidy the name; School fees is permanent; the kind cannot change once created.
+create or replace function public.fee_types_guard() returns trigger
+language plpgsql as $$
+begin
+  new.name := regexp_replace(btrim(new.name), '\s+', ' ', 'g');
+  if tg_op = 'INSERT' then
+    if auth.uid() is not null then new.is_default := false; end if;
+    new.active := true; new.created_by := coalesce(auth.uid(), new.created_by);
+  else
+    new.is_default := old.is_default; new.kind := old.kind; new.created_at := old.created_at; new.created_by := old.created_by;
+    if old.is_default and (new.name <> old.name or not new.active) then
+      raise exception 'School fees cannot be renamed or switched off';
+    end if;
+  end if;
+  return new;
+end $$;
+drop trigger if exists fee_types_guard_trg on public.fee_types;
+create trigger fee_types_guard_trg before insert or update on public.fee_types
+  for each row execute function public.fee_types_guard();
+
+-- Amounts per class: only for 'fixed' fees other than School fees (those live in class_fees).
+create or replace function public.fee_amounts_guard() returns trigger
+language plpgsql as $$
+begin
+  if not exists (select 1 from public.fee_types where id = new.fee_type_id and kind = 'fixed' and not is_default) then
+    raise exception 'Amounts per class only apply to fees with a fixed amount (School fees amounts are set in the class fees)';
+  end if;
+  new.updated_at := now(); new.updated_by := auth.uid();
+  return new;
+end $$;
+drop trigger if exists fee_amounts_guard_trg on public.fee_amounts;
+create trigger fee_amounts_guard_trg before insert or update on public.fee_amounts
+  for each row execute function public.fee_amounts_guard();
 
 -- People: the system must always keep at least one active admin.
 create or replace function public.profiles_guard() returns trigger
@@ -214,14 +290,15 @@ create trigger students_audit_trg after insert or update on public.students
 
 create or replace function public.payments_audit() returns trigger
 language plpgsql security definer set search_path = public as $$
-declare n text; c text;
+declare n text; c text; t text;
 begin
   select name, cls into n, c from public.students where id = new.student_id;
+  select name into t from public.fee_types where id = new.fee_type_id;
   if tg_op = 'INSERT' then
-    perform public.write_audit('payment', format('Recorded %s for %s (%s), paid %s%s', public.money_text(new.amount), n, c,
+    perform public.write_audit('payment', format('Recorded %s for %s (%s), %s, paid %s%s', public.money_text(new.amount), n, c, t,
       to_char(new.paid_on, 'DD Mon YYYY'), case when coalesce(new.note,'') <> '' then ' - ' || new.note else '' end));
   elsif new.voided and not old.voided then
-    perform public.write_audit('payment_void', format('Voided %s for %s (%s), paid %s. Reason: %s', public.money_text(new.amount), n, c,
+    perform public.write_audit('payment_void', format('Voided %s for %s (%s), %s, paid %s. Reason: %s', public.money_text(new.amount), n, c, t,
       to_char(new.paid_on, 'DD Mon YYYY'), new.void_reason));
   end if;
   return null;
@@ -244,6 +321,40 @@ drop trigger if exists class_fees_audit_trg on public.class_fees;
 create trigger class_fees_audit_trg after insert or update on public.class_fees
   for each row execute function public.class_fees_audit();
 
+create or replace function public.fee_types_audit() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if tg_op = 'INSERT' then
+    if not new.is_default then
+      perform public.write_audit('fee_type', format('Added fee %s (%s)', new.name, case when new.kind = 'fixed' then 'fixed amount per class' else 'just collect' end));
+    end if;
+  else
+    if new.name <> old.name then perform public.write_audit('fee_type', format('Renamed fee %s to %s', old.name, new.name)); end if;
+    if new.active <> old.active then
+      perform public.write_audit('fee_type', case when new.active then format('Switched on fee %s', new.name) else format('Switched off fee %s', new.name) end);
+    end if;
+  end if;
+  return null;
+end $$;
+drop trigger if exists fee_types_audit_trg on public.fee_types;
+create trigger fee_types_audit_trg after insert or update on public.fee_types
+  for each row execute function public.fee_types_audit();
+
+create or replace function public.fee_amounts_audit() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare t text := (select name from public.fee_types where id = new.fee_type_id);
+begin
+  if tg_op = 'INSERT' then
+    if new.amount > 0 then perform public.write_audit('fees_set', format('Set %s for %s to %s', t, new.cls, public.money_text(new.amount))); end if;
+  elsif new.amount <> old.amount then
+    perform public.write_audit('fees_set', format('Changed %s for %s from %s to %s', t, new.cls, public.money_text(old.amount), public.money_text(new.amount)));
+  end if;
+  return null;
+end $$;
+drop trigger if exists fee_amounts_audit_trg on public.fee_amounts;
+create trigger fee_amounts_audit_trg after insert or update on public.fee_amounts
+  for each row execute function public.fee_amounts_audit();
+
 create or replace function public.profiles_audit() returns trigger
 language plpgsql security definer set search_path = public as $$
 declare who text := coalesce(nullif(btrim(new.full_name),''), new.email);
@@ -254,6 +365,8 @@ begin
   else
     if new.active <> old.active then
       perform public.write_audit('user', case when new.active then format('Approved %s as %s', who, new.role) else format('Disabled access for %s', who) end);
+    elsif new.rejected and not old.rejected then
+      perform public.write_audit('user', format('Declined the access request from %s', who));
     elsif new.role <> old.role then
       perform public.write_audit('user', format('Changed role of %s from %s to %s', who, old.role, new.role));
     end if;
@@ -293,6 +406,8 @@ alter table public.profiles   enable row level security;
 alter table public.students   enable row level security;
 alter table public.payments   enable row level security;
 alter table public.class_fees enable row level security;
+alter table public.fee_types  enable row level security;
+alter table public.fee_amounts enable row level security;
 alter table public.audit_log  enable row level security;
 
 drop policy if exists profiles_read   on public.profiles;
@@ -332,26 +447,70 @@ create policy class_fees_insert on public.class_fees for insert to authenticated
 create policy class_fees_update on public.class_fees for update to authenticated
   using ((select public.my_role()) = 'admin') with check ((select public.my_role()) = 'admin');
 
+drop policy if exists fee_types_read    on public.fee_types;
+drop policy if exists fee_types_insert  on public.fee_types;
+drop policy if exists fee_types_update  on public.fee_types;
+drop policy if exists fee_amounts_read   on public.fee_amounts;
+drop policy if exists fee_amounts_insert on public.fee_amounts;
+drop policy if exists fee_amounts_update on public.fee_amounts;
+create policy fee_types_read    on public.fee_types for select to authenticated using ((select public.my_role()) is not null);
+create policy fee_types_insert  on public.fee_types for insert to authenticated with check ((select public.my_role()) = 'admin');
+create policy fee_types_update  on public.fee_types for update to authenticated
+  using ((select public.my_role()) = 'admin') with check ((select public.my_role()) = 'admin');
+create policy fee_amounts_read   on public.fee_amounts for select to authenticated using ((select public.my_role()) is not null);
+create policy fee_amounts_insert on public.fee_amounts for insert to authenticated with check ((select public.my_role()) = 'admin');
+create policy fee_amounts_update on public.fee_amounts for update to authenticated
+  using ((select public.my_role()) = 'admin') with check ((select public.my_role()) = 'admin');
+
 drop policy if exists audit_read on public.audit_log;
 create policy audit_read on public.audit_log for select to authenticated
   using ((select public.my_role()) = 'admin');
 
 -- Table permissions: signed-out visitors get nothing; signed-in users only the columns they need.
-revoke all on public.profiles, public.students, public.payments, public.class_fees, public.audit_log from anon, authenticated;
-grant select on public.profiles, public.students, public.payments, public.class_fees, public.audit_log to authenticated;
-grant update (role, active, full_name) on public.profiles to authenticated;
+revoke all on public.profiles, public.students, public.payments, public.class_fees, public.fee_types, public.fee_amounts, public.audit_log from anon, authenticated;
+grant select on public.profiles, public.students, public.payments, public.class_fees, public.fee_types, public.fee_amounts, public.audit_log to authenticated;
+grant update (role, active, full_name, rejected) on public.profiles to authenticated;
 grant insert (name, cls) on public.students to authenticated;
 grant update (name, cls, custom_fee, archived, archive_reason) on public.students to authenticated;
-grant insert (student_id, amount, paid_on, note) on public.payments to authenticated;
+grant insert (student_id, fee_type_id, amount, paid_on, note) on public.payments to authenticated;
 grant update (voided, void_reason) on public.payments to authenticated;
 grant insert (cls, fee) on public.class_fees to authenticated;
 grant update (fee) on public.class_fees to authenticated;
+grant insert (name, kind) on public.fee_types to authenticated;
+grant update (name, active) on public.fee_types to authenticated;
+grant insert (fee_type_id, cls, amount) on public.fee_amounts to authenticated;
+grant update (amount) on public.fee_amounts to authenticated;
+
+-- ---------- 7b. Deleting a pupil (admin only) ----------
+-- There is no direct delete on any table. This is the only way, and it needs a reason.
+-- Before anything is removed, the activity log gets a full copy of what is about to go.
+create or replace function public.delete_student(sid uuid, reason text) returns void
+language plpgsql security definer set search_path = public as $$
+declare s public.students%rowtype; n int; tot numeric; lines text;
+begin
+  if coalesce(public.my_role(), '') <> 'admin' then raise exception 'Only an admin can delete pupils'; end if;
+  if btrim(coalesce(reason, '')) = '' then raise exception 'A reason is required to delete a pupil'; end if;
+  select * into s from public.students where id = sid for update;
+  if not found then raise exception 'This pupil no longer exists'; end if;
+  select count(*), coalesce(sum(p.amount) filter (where not p.voided), 0),
+         coalesce(string_agg(format('%s %s %s%s', to_char(p.paid_on, 'DD Mon YYYY'), ft.name, public.money_text(p.amount),
+                  case when p.voided then ' (voided)' else '' end), '; ' order by p.paid_on, p.created_at), '')
+    into n, tot, lines from public.payments p join public.fee_types ft on ft.id = p.fee_type_id where p.student_id = sid;
+  perform public.write_audit('pupil_delete',
+    format('Deleted pupil %s (%s). Reason: %s. Removed %s payment record(s) totalling %s%s',
+           s.name, s.cls, btrim(reason), n, public.money_text(tot),
+           case when n > 0 then '. Payments: ' || lines else '' end));
+  delete from public.payments where student_id = sid;
+  delete from public.students where id = sid;
+end $$;
+revoke all on function public.delete_student(uuid, text) from public, anon;
+grant execute on function public.delete_student(uuid, text) to authenticated;
 
 -- ---------- 8. Live updates between devices ----------
 do $$
 declare t text;
 begin
-  foreach t in array array['students','payments','class_fees','profiles'] loop
+  foreach t in array array['students','payments','class_fees','fee_types','fee_amounts','profiles'] loop
     begin
       execute format('alter publication supabase_realtime add table public.%I', t);
     exception when duplicate_object then null;

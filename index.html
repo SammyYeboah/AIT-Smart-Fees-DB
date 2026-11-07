@@ -68,7 +68,7 @@
 <div class="screen" id="screenWait" hidden>
   <div class="hero"><img src="icons/logo-login.png" alt="AIT Smart School Academy logo"><h1>AIT SMART FEE KEEPER</h1></div>
   <div class="panel">
-    <h2>Waiting for approval</h2>
+    <h2 id="waitTitle">Waiting for approval</h2>
     <p class="lead" id="waitText">Your request has been received. An admin needs to approve it before you can open the records.</p>
     <button class="btn" id="waitCheck">Check again</button>
     <button class="btn alt" id="waitOut">Sign out</button>
@@ -86,11 +86,13 @@
           <div class="line"><span id="who">AIT Smart School Academy</span><b class="role" id="rolePill"></b></div>
         </div>
       </div>
-      <div class="stats">
+      <div class="stats" id="stats">
         <div class="stat"><b class="num" id="sCol">GH₵0</b><span>Collected</span></div>
         <div class="stat owe"><b class="num" id="sOwe">GH₵0</b><span>Still owing</span></div>
+        <div class="stat over" id="stOver" hidden><b class="num" id="sOver">GH₵0</b><span>Overpaid</span></div>
         <div class="stat"><b class="num" id="sStu">0</b><span>Pupils</span></div>
       </div>
+      <div class="feenow">Totals shown: <b>School fees</b></div>
     </div>
   </header>
 
@@ -107,6 +109,9 @@
 
         <label for="fClass">Class</label>
         <select id="fClass"></select>
+
+        <label for="fFee">Payment for</label>
+        <select id="fFee"></select>
 
         <div class="row">
           <div><label for="fAmt">Amount paid (GH₵)</label><input id="fAmt" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
@@ -131,7 +136,9 @@
           <button class="chip" data-v="" aria-pressed="true">All</button>
           <button class="chip" data-v="owing" aria-pressed="false">Owing</button>
           <button class="chip" data-v="cleared" aria-pressed="false">Cleared</button>
+          <button class="chip" data-v="over" aria-pressed="false">Overpaid</button>
         </div>
+        <p class="hint" style="margin:8px 2px 0">Balances here are for School fees. Other fees are in the Report tab.</p>
       </div>
       <div id="listWrap"><div class="empty">Loading records…</div></div>
     </section>
@@ -144,11 +151,13 @@
           <button data-v="sum" aria-pressed="true">Fees summary</button>
           <button data-v="log" aria-pressed="false">Payment log</button>
         </div>
+        <label for="rFee">Fee</label>
+        <select id="rFee"></select>
         <label for="rClass">Class</label>
         <select id="rClass"></select>
         <div id="rSumFilter">
           <label for="rStatus">Show</label>
-          <select id="rStatus"><option value="">Everyone</option><option value="owing">Only pupils owing</option><option value="cleared">Only cleared pupils</option></select>
+          <select id="rStatus"><option value="">Everyone</option><option value="owing">Only pupils owing</option><option value="cleared">Only cleared pupils</option><option value="over">Only overpaid pupils</option></select>
         </div>
         <div class="row" id="rDates" hidden>
           <div><label for="rFrom">From</label><input id="rFrom" type="date"></div>
@@ -173,10 +182,25 @@
     <!-- FEES -->
     <section class="tab" id="tab-fees">
       <div class="card">
-        <h2>Class fees</h2>
-        <p class="lead" id="feeLead"></p>
+        <h2 id="feeTitle">Class fees</h2>
+        <label for="feeSel">Fee</label>
+        <select id="feeSel"></select>
+        <p class="lead" id="feeLead" style="margin-top:10px"></p>
         <div id="feeList"></div>
-        <button class="btn" id="feeSave">Save fees</button>
+        <button class="btn" id="feeSave">Save amounts</button>
+        <button class="btn alt" id="feeOff" hidden></button>
+      </div>
+      <div class="card" id="feeMgr" hidden>
+        <h2>Add a new fee</h2>
+        <p class="lead">For example Christmas party, Sports fees or Books. Once added, staff can pick it from the list when they record a payment, and the Report tab can show it on its own.</p>
+        <label for="feeNew">Name of the fee</label>
+        <input id="feeNew" maxlength="60" placeholder="e.g. Sports fees" autocomplete="off">
+        <label for="feeKind">How does it work?</label>
+        <select id="feeKind">
+          <option value="fixed">Fixed amount per class (shows who still owes)</option>
+          <option value="collect">Just collect (only totals, no owing)</option>
+        </select>
+        <button class="btn" id="feeAdd">Add fee</button>
       </div>
     </section>
 
@@ -190,19 +214,20 @@
         <button class="btn alt" id="passBtn">Update password</button>
         <button class="btn" id="outBtn">Sign out</button>
         <p class="hint">You are signed out automatically after 30 minutes without use.</p>
+        <p class="hint" id="ver"></p>
       </div>
 
       <div class="card" id="usersCard" hidden>
         <h2>People</h2>
-        <p class="lead">Approve new staff and choose what each person can do.</p>
+        <p class="lead">Approve or decline new staff and choose what each person can do.</p>
         <div id="usersList"></div>
       </div>
 
       <div class="card">
         <h2>Who can do what</h2>
         <ul class="rolelist">
-          <li><b>Admin</b>Sets class and custom fees, voids payments, archives pupils, approves people, reads the activity log.</li>
-          <li><b>Bursar</b>Records payments, adds pupils, fixes names and classes, views every report.</li>
+          <li><b>Admin</b>Adds fees and sets class amounts, voids payments, archives or deletes pupils, approves or declines people, reads the activity log.</li>
+          <li><b>Bursar</b>Records payments for any fee, adds pupils, fixes names and classes, views every report.</li>
           <li><b>View only</b>Sees pupils, balances and reports. Cannot change anything.</li>
         </ul>
       </div>
@@ -250,7 +275,7 @@
   <h2>Edit pupil</h2>
   <label for="eName">Name</label><input id="eName">
   <label for="eClass">Class</label><select id="eClass"></select>
-  <div id="eFeeWrap" hidden><label for="eFee">Custom fee (GH₵, optional)</label><input id="eFee" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Leave blank to use the class fee"></div>
+  <div id="eFeeWrap" hidden><label for="eFee">Custom school fee (GH₵, optional)</label><input id="eFee" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Leave blank to use the class fee"></div>
   <div class="row"><button class="btn alt" id="eCancel">Cancel</button><button class="btn" id="eSave">Save</button></div>
 </div></div>
 
