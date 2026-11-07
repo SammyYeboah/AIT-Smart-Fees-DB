@@ -211,7 +211,7 @@ window.AIT_CONFIG = {
 
 **Note:** This is documentation, not a verification of every feature. We should compare the role permissions and registration workflow against the actual application before presenting them as confirmed functionality.
 
-
+'''’’’
 
 CREDITS:
 Claude AI by Anthropic
