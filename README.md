@@ -214,10 +214,10 @@ window.AIT_CONFIG = {
 **✨ LOSTA Inc ✨**
 ---
 
-#####CREDITS:
+##### CREDITS:
 * Claude AI by Anthropic.
 * OpenAI ChatGPT.
 
-#####SITE:
+##### SITE:
 https://aitsmartfees.netlify.app
 
