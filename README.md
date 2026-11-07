@@ -211,8 +211,6 @@ window.AIT_CONFIG = {
 **Note:** This is documentation, not a verification of every feature. Compare the role permissions and registration workflow against the actual application.
 
 ---
-**✨ LOSTA Inc ✨**
----
 
 ##### CREDITS:
 * Claude AI by Anthropic.
@@ -220,4 +218,10 @@ window.AIT_CONFIG = {
 
 ##### SITE:
 https://aitsmartfees.netlify.app
+
+---
+<p align="center">
+  --- ✨ <strong>LOSTA Inc</strong> ✨ ---
+</p>
+
 
