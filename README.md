@@ -186,15 +186,6 @@ The database includes the following main tables:
 
 ---
 
-### CREDITS:
-* Claude AI by Anthropic.
-* OpenAI ChatGPT.
-
-### SITE:
-https://aitsmartfees.netlify.app.
-
----
-
 ## 🔑 Application Configuration
 
 The application connects to Supabase through `config.js`.
@@ -212,12 +203,21 @@ Example:
 
 ```javascript
 window.AIT_CONFIG = {
-  SUPABASE_URL: "YOUR_SUPABASE_PROJECT_URL",
-  SUPABASE_ANON_KEY: "YOUR_SUPABASE_PUBLIC_KEY"
+    SUPABASE_URL: "YOUR_SUPABASE_PROJECT_URL",
+    SUPABASE_ANON_KEY: "YOUR_SUPABASE_PUBLIC_KEY"
 };
-
-
+```
 
 **Note:** This is documentation, not a verification of every feature. Compare the role permissions and registration workflow against the actual application.
 
-     --- LOSTA Inc✨ ---
+---
+**✨ LOSTA Inc ✨**
+---
+
+#####CREDITS:
+* Claude AI by Anthropic.
+* OpenAI ChatGPT.
+
+#####SITE:
+https://aitsmartfees.netlify.app
+
