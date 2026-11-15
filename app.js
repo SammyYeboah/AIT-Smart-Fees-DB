@@ -544,9 +544,17 @@ async function renderMore() {
   $("archList").innerHTML = arch.length
     ? arch.map(s => `<div class="urow"><div class="uinfo"><b>${esc(s.name)}</b><span class="sub">${esc(s.cls)}${s.archive_reason ? " · " + esc(s.archive_reason) : ""}</span></div><button class="btn sm alt" data-restore="${esc(s.id)}">Restore</button><button class="btn sm danger" data-del="${esc(s.id)}">Delete</button></div>`).join("")
     : '<div class="sub">No archived pupils.</div>';
+  renderLog();
+}
+let logAll = false;
+function renderLog() {
+  const shown = logAll ? LOGS : LOGS.slice(0, 5);
   $("actList").innerHTML = LOGS.length
-    ? LOGS.map(i => `<div class="logi">${esc(i.details)}<span class="sub">${fmtStamp(i.at)} · ${esc(i.user_name || "System")}</span></div>`).join("")
+    ? shown.map(i => `<div class="logi"><span class="ltxt">${esc(i.details)}</span><span class="sub">${fmtStamp(i.at)} · ${esc(i.user_name || "System")}</span></div>`).join("")
     : '<div class="sub">Nothing recorded yet.</div>';
+  const more = $("logMore"); more.hidden = LOGS.length <= 5;
+  more.textContent = logAll ? "Show less" : `Show all recent activity (${LOGS.length})`;
+  $("logNote").hidden = !(logAll && LOGS.length >= 200);
 }
 function renderUsers() {
   const sel = v => `<select data-role aria-label="Role">${[["admin", "Admin"], ["bursar", "Bursar"], ["viewer", "View only"]].map(([k, l]) => `<option value="${k}" ${k === v ? "selected" : ""}>${l}</option>`).join("")}</select>`;
@@ -598,6 +606,8 @@ $("expAll").onclick = () => {
   const data = { exported: new Date().toISOString(), classFees: FEES, feeTypes: FT, feeAmounts: FA, students: [...S.values()], payments: P };
   download(`AIT-Fee-Keeper-Backup-${today()}.json`, JSON.stringify(data, null, 2), "application/json", true);
 };
+$("logMore").onclick = () => { logAll = !logAll; renderLog(); };
+$("actList").onclick = e => { const t = e.target.closest(".logi"); if (t) t.classList.toggle("open"); };
 $("logCsv").onclick = () => run(async () => {
   const items = await fetchAll("audit_log", "at,user_name,action,details", "id");
   if (!items.length) return toast("Nothing to download");
