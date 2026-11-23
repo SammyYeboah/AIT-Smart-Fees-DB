@@ -1,6 +1,6 @@
 // Keeps the app's own files available when the connection is poor.
 // Records are never cached here: requests to the database always go to the network.
-const CACHE = "ait-fee-keeper-v1";
+const CACHE = "ait-fee-keeper-v2";
 const SHELL = ["./", "index.html", "styles.css", "app.js", "config.js", "vendor/supabase.js",
   "manifest.webmanifest", "icons/logo-badge.png", "icons/logo-login.png", "icons/logo-watermark.png"];
 

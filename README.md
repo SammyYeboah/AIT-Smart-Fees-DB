@@ -58,6 +58,8 @@ All authorised users work with the same central database, ensuring that changes 
 - Maintain student names and class information.
 - View individual student payment status.
 - Track outstanding balances.
+- Delete one payment entered by mistake (admin only, with a reason; the activity log keeps a copy). Void keeps it on record instead. Needs the 1.2 `schema.sql` run once.
+- In the Report tab, tick the classes you want (or Select all / Clear) instead of choosing one.
 - Archive a pupil (hidden, history kept) or delete a pupil permanently (admin only, with a reason; the activity log keeps a full copy of what was removed).
 
 ### 💰 Payment Management

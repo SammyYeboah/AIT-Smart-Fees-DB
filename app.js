@@ -181,12 +181,30 @@ function renderFeeSelects() {
 function renderNames() {
   $("nameList").innerHTML = activeStudents().sort((a, b) => a.name.localeCompare(b.name)).map(s => `<option value="${esc(s.name)}">${esc(s.cls)}</option>`).join("");
 }
+// Report classes: tick the ones you want. All are ticked to start with.
+const rCls = new Set(CLASSES);
+const rAll = () => rCls.size === CLASSES.length;
+const rClsOk = c => rCls.has(c);
+const rClsLabel = () => rAll() ? "All classes" : rCls.size === 0 ? "No class chosen" : CLASSES.filter(c => rCls.has(c)).join(", ");
+function drawRClass() {
+  $("rClassBox").innerHTML = `<div class="clsAct"><button type="button" class="chip" data-act="all">Select all</button><button type="button" class="chip" data-act="none">Clear</button></div><div class="clsGrid">${CLASSES.map((c, i) => `<label class="ck"><input type="checkbox" data-c="${esc(c)}" ${rCls.has(c) ? "checked" : ""}><span>${esc(c)}</span></label>`).join("")}</div>`;
+}
+$("rClassBox").addEventListener("click", e => {
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  if (b.dataset.act === "all") CLASSES.forEach(c => rCls.add(c)); else rCls.clear();
+  drawRClass(); renderReport();
+});
+$("rClassBox").addEventListener("change", e => {
+  const i = e.target.closest("input[data-c]"); if (!i) return;
+  if (i.checked) rCls.add(i.dataset.c); else rCls.delete(i.dataset.c);
+  renderReport();
+});
 function fillSelects() {
   const opts = CLASSES.map(c => `<option>${c}</option>`).join("");
   $("fClass").innerHTML = `<option value="">Select class</option>` + opts;
   $("eClass").innerHTML = opts;
   $("qClass").innerHTML = `<option value="">All classes</option>` + opts;
-  $("rClass").innerHTML = `<option value="">All classes</option>` + opts;
+  drawRClass();
 }
 
 /* ---------- record a payment ---------- */
@@ -288,7 +306,7 @@ function renderList() {
         <button class="stuTop" data-toggle="1"><div class="who"><div class="nm">${esc(s.name)}</div>
           <div class="sub num">Paid ${money(p)}${f ? ` of ${money(f)}` : ""}${s.custom_fee != null ? " · custom fee" : ""} · ${liveN} payment${liveN !== 1 ? "s" : ""}${otherN ? ` · ${otherN} other fee${otherN > 1 ? "s" : ""}` : ""}</div>
           ${f ? `<div class="bar ${st === "over" ? "over" : ""}"><i style="width:${pct}%"></i></div>` : ""}</div>${right}</button>
-        <div class="pays">${ps.map(x => `<div class="pay ${x.voided ? "void" : ""}"><div><b class="num">${money(x.amount)}</b> <span class="sub"><span class="tag">${esc(ftName(x.fee_type_id))}</span>${fmtDate(x.paid_on)}${x.note ? " · " + esc(x.note) : ""}${x.voided ? ` · voided: ${esc(x.void_reason || "")}` : ""}</span></div>${isAdmin && !x.voided ? `<button class="x" data-void="${esc(x.id)}">Void</button>` : ""}</div>`).join("") || '<div class="sub" style="padding:8px 0">No payments yet</div>'}
+        <div class="pays">${ps.map(x => `<div class="pay ${x.voided ? "void" : ""}"><div><b class="num">${money(x.amount)}</b> <span class="sub"><span class="tag">${esc(ftName(x.fee_type_id))}</span>${fmtDate(x.paid_on)}${x.note ? " · " + esc(x.note) : ""}${x.voided ? ` · voided: ${esc(x.void_reason || "")}` : ""}</span></div>${isAdmin ? `${x.voided ? "" : `<button class="x" data-void="${esc(x.id)}">Void</button>`}<button class="x" data-delpay="${esc(x.id)}">Delete</button>` : ""}</div>`).join("") || '<div class="sub" style="padding:8px 0">No payments yet</div>'}
           <div class="actions">${canWrite ? `<button class="btn sm" data-addpay="${esc(s.id)}">Add payment</button><button class="btn sm alt" data-edit="${esc(s.id)}">Edit</button>` : ""}${isAdmin ? `<button class="btn sm alt" data-arch="${esc(s.id)}">Archive</button><button class="btn sm danger" data-del="${esc(s.id)}">Delete</button>` : ""}</div></div>
       </div>`;
     });
@@ -302,10 +320,11 @@ $("qStatus").onclick = e => {
   $("qStatus").querySelectorAll(".chip").forEach(x => x.setAttribute("aria-pressed", x === b)); renderList();
 };
 $("listWrap").addEventListener("click", async e => {
-  const t = e.target.closest("[data-toggle],[data-void],[data-edit],[data-arch],[data-addpay],[data-del]"); if (!t) return;
+  const t = e.target.closest("[data-toggle],[data-void],[data-edit],[data-arch],[data-addpay],[data-del],[data-delpay]"); if (!t) return;
   if (t.dataset.toggle) { t.closest(".stu").classList.toggle("open"); return; }
   if (t.dataset.addpay) { const s = S.get(t.dataset.addpay); showTab("add"); $("fName").value = s.name; $("fName").dispatchEvent(new Event("input")); $("fAmt").focus(); return; }
   if (t.dataset.del) { await deletePupil(t.dataset.del); return; }
+  if (t.dataset.delpay) { await deletePayment(t.dataset.delpay); return; }
   if (t.dataset.void) {
     const p = P.find(x => x.id === t.dataset.void), s = S.get(p.student_id);
     const r = await ask("Void this payment?", `${money(p.amount)} from ${s ? s.name : "this pupil"} will stop counting. It stays visible with your reason.`, "Void payment", true, true);
@@ -324,6 +343,13 @@ $("listWrap").addEventListener("click", async e => {
     $("editModal").hidden = false;
   }
 });
+// Delete one payment for good (for a payment entered by mistake). Admin only, with a reason; the activity log keeps a copy.
+async function deletePayment(id) {
+  const p = P.find(x => x.id === id); if (!p) return;
+  const s = S.get(p.student_id);
+  const r = await ask("Delete this payment?", `${money(p.amount)} (${ftName(p.fee_type_id)}, ${fmtDate(p.paid_on)}) from ${s ? s.name : "this pupil"} will be removed completely and cannot be brought back. The activity log keeps a copy. To keep it on record, use Void instead.`, "Delete payment", true, true); if (!r) return;
+  await run(async () => { need(await sb.rpc("delete_payment", { pid: id, reason: r.reason })); toast("Payment deleted"); await loadAll(); });
+}
 // Permanent. Only an admin, only with a reason, and the activity log keeps a full copy of what was removed.
 async function deletePupil(id) {
   const s = S.get(id); if (!s) return;
@@ -353,9 +379,9 @@ $("eSave").onclick = async () => {
 const repFee = () => $("rFee").value || SCHOOL_ID;            // a fee id, or "all"
 const repKind = ft => ft === "all" ? "all" : ((feeType(ft) || {}).kind || "fixed");
 function sumRows(ft) {
-  const cf = $("rClass").value, st = $("rStatus").value, kind = repKind(ft);
+  const st = $("rStatus").value, kind = repKind(ft);
   return activeStudents().filter(s => {
-    if (cf && s.cls !== cf) return false;
+    if (!rClsOk(s.cls)) return false;
     // Other fees list only the pupils the fee applies to (their class has an amount) or who have paid something.
     if (ft !== SCHOOL_ID && !(feeOf(s, ft) > 0 || paidBy(s.id, ft) > 0)) return false;
     if (kind === "fixed") {
@@ -367,28 +393,29 @@ function sumRows(ft) {
   }).sort((a, b) => CLASSES.indexOf(a.cls) - CLASSES.indexOf(b.cls) || a.name.localeCompare(b.name));
 }
 function logRows(ft) {
-  const cf = $("rClass").value, from = $("rFrom").value, to = $("rTo").value;
-  return liveRows(ft === "all" ? null : ft).map(p => ({ p, s: S.get(p.student_id) })).filter(x => (!cf || x.s.cls === cf) && (!from || x.p.paid_on >= from) && (!to || x.p.paid_on <= to))
+  const from = $("rFrom").value, to = $("rTo").value;
+  return liveRows(ft === "all" ? null : ft).map(p => ({ p, s: S.get(p.student_id) })).filter(x => rClsOk(x.s.cls) && (!from || x.p.paid_on >= from) && (!to || x.p.paid_on <= to))
     .sort((a, b) => CLASSES.indexOf(a.s.cls) - CLASSES.indexOf(b.s.cls) || a.s.name.localeCompare(b.s.name) || a.p.paid_on.localeCompare(b.p.paid_on));
 }
 // One line per fee: how many payments and how much was collected.
 function feeTotals() {
-  const cf = $("rClass").value, live = liveRows(null).filter(p => !cf || S.get(p.student_id).cls === cf);
+  const live = liveRows(null).filter(p => rClsOk(S.get(p.student_id).cls));
   return FT.map(f => { const rows = live.filter(p => p.fee_type_id === f.id); return { f, n: rows.length, total: round2(rows.reduce((a, p) => a + p.amount, 0)) }; }).filter(x => x.n || x.f.active);
 }
 function renderReport() {
-  const ft = repFee(), kind = repKind(ft), cf = $("rClass").value, body = $("rBody"), fname = ft === "all" ? "All fees" : ftName(ft);
+  const ft = repFee(), kind = repKind(ft), cf = rClsLabel(), body = $("rBody"), fname = ft === "all" ? "All fees" : ftName(ft);
   $("rSumFilter").hidden = rMode !== "sum" || kind !== "fixed"; $("rDates").hidden = rMode !== "log";
   if (!loaded) { body.innerHTML = '<div class="empty">Loading records…</div>'; return; }
+  if (!rCls.size) { $("rSub").textContent = ""; body.innerHTML = '<div class="empty">Tick at least one class to see the report.</div>'; return; }
   if (rMode === "sum" && kind === "all") {
     const rows = feeTotals();
-    $("rSub").textContent = `Collected by fee · ${cf || "All classes"} · ${fmtDate(today())}`;
+    $("rSub").textContent = `Collected by fee · ${cf} · ${fmtDate(today())}`;
     let h = `<table><tr><th>Fee</th><th class="r">Payments</th><th class="r">Collected</th></tr>`, N = 0, T = 0;
     rows.forEach(x => { h += `<tr><td>${esc(x.f.name)}${x.f.active ? "" : '<div class="sub">switched off</div>'}</td><td class="r num">${x.n}</td><td class="r num">${money(x.total)}</td></tr>`; N += x.n; T += x.total; });
     body.innerHTML = h + `<tr class="grand"><td>Grand total</td><td class="r num">${N}</td><td class="r num">${money(round2(T))}</td></tr></table>`;
   } else if (rMode === "sum" && kind === "collect") {
     const rows = sumRows(ft);
-    $("rSub").textContent = `${fname} · ${cf || "All classes"} · ${fmtDate(today())}`;
+    $("rSub").textContent = `${fname} · ${cf} · ${fmtDate(today())}`;
     if (!rows.length) { body.innerHTML = '<div class="empty">No payments for this fee yet.</div>'; return; }
     let h = `<table><tr><th>Name</th><th class="r">Paid</th></tr>`, cur = "", sub = 0, grand = 0;
     const flush = () => { if (cur) h += `<tr class="tot"><td>${cur} total</td><td class="r num">${money(round2(sub))}</td></tr>`; };
@@ -399,7 +426,7 @@ function renderReport() {
     flush(); body.innerHTML = h + `<tr class="grand"><td>Grand total (${rows.length})</td><td class="r num">${money(round2(grand))}</td></tr></table>`;
   } else if (rMode === "sum") {
     const rows = sumRows(ft);
-    $("rSub").textContent = `${ft === SCHOOL_ID ? "Fees summary" : fname} · ${cf || "All classes"} · ${fmtDate(today())}`;
+    $("rSub").textContent = `${ft === SCHOOL_ID ? "Fees summary" : fname} · ${cf} · ${fmtDate(today())}`;
     if (!rows.length) { body.innerHTML = `<div class="empty">${ft === SCHOOL_ID ? "No pupils match these filters." : "No pupils match. Set the amounts in the Fees tab, or record a payment for this fee."}</div>`; return; }
     // The Overpaid column only appears when somebody in this list has paid more than their fee.
     const ov = rows.some(s => overOf(s, ft) > 0), cols = ov ? 5 : 4, oc = t => ov ? `<td class="r num">${t}</td>` : "";
@@ -415,7 +442,7 @@ function renderReport() {
     body.innerHTML = h + `<tr class="grand"><td>Grand total (${rows.length})</td><td class="r num">${money(round2(GF))}</td><td class="r num">${money(round2(GP))}</td><td class="r num">${money(round2(GO))}</td>${oc(money(round2(GX)))}</tr></table>`;
   } else {
     const rows = logRows(ft), from = $("rFrom").value, to = $("rTo").value;
-    $("rSub").textContent = `Payment log · ${fname} · ${cf || "All classes"} · ${from || to ? `${from ? fmtDate(from) : "start"} to ${to ? fmtDate(to) : "today"}` : "All dates"}`;
+    $("rSub").textContent = `Payment log · ${fname} · ${cf} · ${from || to ? `${from ? fmtDate(from) : "start"} to ${to ? fmtDate(to) : "today"}` : "All dates"}`;
     if (!rows.length) { body.innerHTML = '<div class="empty">No payments match these filters.</div>'; return; }
     let h = `<table><tr><th>Name</th><th>Date</th><th class="r">Amount</th></tr>`, cur = "", sub = 0, grand = 0;
     const flush = () => { if (cur) h += `<tr class="tot"><td colspan="2">${cur} total</td><td class="r num">${money(round2(sub))}</td></tr>`; };
@@ -433,7 +460,7 @@ $("rMode").onclick = e => {
   const b = e.target.closest("button"); if (!b) return; rMode = b.dataset.v;
   $("rMode").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); renderReport();
 };
-["rFee", "rClass", "rStatus", "rFrom", "rTo"].forEach(i => { $(i).onchange = renderReport; });
+["rFee", "rStatus", "rFrom", "rTo"].forEach(i => { $(i).onchange = renderReport; });
 
 function cell(v) { let t = String(v ?? ""); if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; return `"${t.replace(/"/g, '""')}"`; }
 function download(name, content, type, isExport) {
