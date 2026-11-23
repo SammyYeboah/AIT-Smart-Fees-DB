@@ -218,3 +218,9 @@ nav button.alert .ic::after{content:"";position:absolute;top:1px;right:7px;width
 /* activity log: short by default, tap an entry to read all of it */
 .logi .ltxt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
 .logi.open .ltxt{display:block;-webkit-line-clamp:unset;overflow:visible}
+
+.clsBox{border:1.5px solid var(--line);border-radius:13px;padding:10px;background:var(--surface)}
+.clsAct{display:flex;gap:8px;margin-bottom:8px}
+.clsGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px}
+.ck{display:flex;align-items:center;gap:8px;margin:0;padding:7px 9px;border:1px solid var(--line);border-radius:10px;font-size:13.5px;font-weight:600;color:var(--fg);letter-spacing:0;cursor:pointer;background:var(--surface2)}
+.ck input{width:18px;height:18px;margin:0;flex:none;accent-color:var(--royal)}
